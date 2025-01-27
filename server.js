@@ -66,14 +66,6 @@ app.get("/", (req, res) => {
 app.post("/convert-to-csv", upload.single("file"), (req, res) => {
     try {
         const filePath = req.file.path;
-        let newRow;
-        try {
-            newRow = JSON.parse(req.body.row);
-        } catch (err) {
-            return res
-                .status(400)
-                .send("Fehler: Die neue Zeile (`row`) muss ein gültiger JSON-String sein.");
-        }
 
 
         // Excel-Datei einlesen
@@ -82,7 +74,7 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
         const worksheet = workbook.Sheets[sheetName];
 
         const data = xlsx.utils.sheet_to_json(worksheet, {header: 1});
-        data.push(newRow);
+
 
         const updatedFilePath = `uploads/updated_${req.file.originalname}`;
         xlsx.writeFile(workbook, updatedFilePath);
