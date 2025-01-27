@@ -73,12 +73,12 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
 
         // XLSX-Datei laden
         const filePath = req.file.path;
-        const workbook = XLSX.readFile(filePath);
+        const workbook = xlsx.readFile(filePath);
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
         // In CSV umwandeln
-        const csvData = XLSX.utils.sheet_to_csv(sheet);
+        const csvData = xlsx.utils.sheet_to_csv(sheet);
 
         // Temporäre CSV-Datei erstellen
         const csvFilePath = `uploads/${path.parse(req.file.originalname).name}.csv`;
