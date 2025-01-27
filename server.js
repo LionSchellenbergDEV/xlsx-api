@@ -89,6 +89,29 @@ app.post("/api/convert-to-csv", upload.single("file"), (req, res) => {
     }
 });
 
+app.post("/api/convert-to-json", upload.single("file"), (req, res) => {
+    try {
+        const filePath = req.file.path;
+
+        // Excel-Datei einlesen
+        const workbook = xlsx.readFile(filePath);
+        const sheetName = workbook.SheetNames[0]; // Erster Tabellenblattname
+        const worksheet = workbook.Sheets[sheetName];
+
+        // Excel-Inhalte in JSON konvertieren
+        const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+        // Temporäre Datei löschen
+        fs.unlinkSync(filePath);
+
+        // JSON-Daten als Antwort zurückgeben
+        res.json(jsonData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Fehler beim Konvertieren der Datei." });
+    }
+});
+
 // Server starten
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
