@@ -66,14 +66,15 @@ app.get("/", (req, res) => {
 app.post("/convert-to-csv", upload.single("file"), (req, res) => {
     try {
         const filePath = req.file.path;
-        const newData = req.body.newData;
-
-        // Validierung: Überprüfen, ob die neuen Daten als Array übergeben wurden
-        if (!newData || !Array.isArray(JSON.parse(newData))) {
-            return res.status(400).json({ error: "newData muss ein Array sein, z.B.: [\"Wert1\", \"Wert2\", \"Wert3\"]" });
+        let newRow;
+        try {
+            newRow = JSON.parse(req.body.row);
+        } catch (err) {
+            return res
+                .status(400)
+                .send("Fehler: Die neue Zeile (`row`) muss ein gültiger JSON-String sein.");
         }
 
-        const newRow = JSON.parse(newData); // Konvertiere die Daten aus dem JSON-String in ein Array
 
         // Excel-Datei einlesen
         const workbook = xlsx.readFile(filePath);
