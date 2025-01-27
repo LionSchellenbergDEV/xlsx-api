@@ -76,7 +76,7 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
         const filePath = req.file.path;
         let workbook;
         try {
-            workbook = XLSX.readFile(filePath);
+            workbook = xlsx.readFile(filePath);
         } catch (err) {
             console.error("Fehler beim Lesen der XLSX-Datei:", err);
             return res.status(400).send("Fehler: Ungültige XLSX-Datei.");
@@ -89,7 +89,7 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
             return res.status(400).send("Fehler: Die XLSX-Datei ist leer.");
         }
         const sheet = workbook.Sheets[sheetName];
-        const csvData = XLSX.utils.sheet_to_csv(sheet);
+        const csvData = xlsx.utils.sheet_to_csv(sheet);
 
         // Schreibe CSV in eine Datei
         const csvFilePath = `uploads/${path.parse(req.file.originalname).name}.csv`;
