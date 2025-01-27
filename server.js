@@ -65,62 +65,44 @@ app.get("/", (req, res) => {
 
 app.post("/convert-to-csv", upload.single("file"), (req, res) => {
     try {
-        // Prüfe, ob eine Datei hochgeladen wurde
-        if (!req.file) {
-            console.error("Fehler: Keine Datei hochgeladen.");
-            return res.status(400).send("Fehler: Es wurde keine Datei hochgeladen.");
-        }
-        console.log("Datei erfolgreich hochgeladen:", req.file);
-
-        // XLSX-Datei laden
         const filePath = req.file.path;
-        try {
-            const workbook = xlsx.readFile(filePath);
-        } catch (err) {
-            console.error("Fehler beim Lesen der XLSX-Datei:", err);
-            return res.status(400).send("Fehler: Ungültige XLSX-Datei.");
+        const newData = req.body.newData;
+
+        // Validierung: Überprüfen, ob die neuen Daten als Array übergeben wurden
+        if (!newData || !Array.isArray(JSON.parse(newData))) {
+            return res.status(400).json({ error: "newData muss ein Array sein, z.B.: [\"Wert1\", \"Wert2\", \"Wert3\"]" });
         }
 
-        // Konvertiere das erste Blatt in CSV
+        const newRow = JSON.parse(newData); // Konvertiere die Daten aus dem JSON-String in ein Array
+
+        // Excel-Datei einlesen
+        const workbook = xlsx.readFile(filePath);
         const sheetName = workbook.SheetNames[0];
-        if (!sheetName) {
-            console.error("Fehler: Die XLSX-Datei enthält keine Blätter.");
-            return res.status(400).send("Fehler: Die XLSX-Datei ist leer.");
-        }
-        const sheet = workbook.Sheets[sheetName];
-        const csvData = xlsx.utils.sheet_to_csv(sheet);
+        const worksheet = workbook.Sheets[sheetName];
 
-        // Schreibe CSV in eine Datei
-        const csvFilePath = `uploads/${path.parse(req.file.originalname).name}.csv`;
-        try {
-            fs.writeFileSync(csvFilePath, csvData);
-        } catch (err) {
-            console.error("Fehler beim Schreiben der CSV-Datei:", err);
-            return res.status(500).send("Fehler: Die CSV-Datei konnte nicht erstellt werden.");
-        }
+        const data = xlsx.utils.sheet_to_json(worksheet, {header: 1});
+        data.push(newRow);
 
-        // CSV-Datei zum Download senden
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename=\"${path.parse(req.file.originalname).name}.csv\"`
-        );
-        res.setHeader("Content-Type", "text/csv");
-        res.sendFile(csvFilePath, (err) => {
+        const updatedFilePath = `uploads/updated_${req.file.originalname}`;
+        xlsx.writeFile(workbook, updatedFilePath);
+
+        // Temporäre Datei löschen
+        fs.unlinkSync(filePath);
+
+        // Datei als Download zurückgeben
+        res.setHeader("Content-Disposition", "attachment; filename=updated_file.xlsx");
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.sendFile(updatedFilePath, (err) => {
             if (err) {
-                console.error("Fehler beim Senden der Datei:", err);
+                console.error("Fehler beim Senden der Datei:",err);
                 res.status(500).send("Fehler beim Senden der Datei.");
-            } else {
-                console.log("Datei erfolgreich gesendet:", csvFilePath);
-                fs.unlinkSync(csvFilePath); // Temporäre Datei löschen
-                fs.unlinkSync(filePath); // Hochgeladene Datei löschen
             }
-        });
+        })
     } catch (err) {
-        console.error("Unerwarteter Fehler:", err);
-        res.status(500).send("Ein unerwarteter Fehler ist aufgetreten.");
+        console.error(err);
+        res.status(500).json({ error: "Fehler beim Verarbeiten der Datei." });
     }
 });
-
 
 // Server starten
 const PORT = process.env.PORT || 3000;
