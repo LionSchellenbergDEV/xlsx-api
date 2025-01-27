@@ -63,6 +63,50 @@ app.get("/", (req, res) => {
     res.json({ message: "Willkommen bei der Excel-API!" });
 });
 
+// Route zum Konvertieren von XLSX in CSV
+app.post("/convert-to-csv", upload.single("file"), (req, res) => {
+    try {
+        // Datei prüfen
+        if (!req.file) {
+            return res.status(400).send("Fehler: Es wurde keine Datei hochgeladen.");
+        }
+
+        // XLSX-Datei laden
+        const filePath = req.file.path;
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        // In CSV umwandeln
+        const csvData = XLSX.utils.sheet_to_csv(sheet);
+
+        // Temporäre CSV-Datei erstellen
+        const csvFilePath = `uploads/${path.parse(req.file.originalname).name}.csv`;
+        fs.writeFileSync(csvFilePath, csvData);
+
+        // Datei zum Download zurückgeben
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${path.parse(req.file.originalname).name}.csv"`
+        );
+        res.setHeader("Content-Type", "text/csv");
+        res.sendFile(csvFilePath, (err) => {
+            if (err) {
+                console.error("Fehler beim Senden der Datei:", err);
+                res.status(500).send("Fehler beim Senden der Datei.");
+            } else {
+                // Temporäre Datei nach dem Senden löschen
+                fs.unlinkSync(csvFilePath);
+                fs.unlinkSync(filePath);
+            }
+        });
+    } catch (err) {
+        console.error("Fehler:", err);
+        res.status(500).send("Ein Problem ist aufgetreten.");
+    }
+});
+
+
 // Server starten
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
