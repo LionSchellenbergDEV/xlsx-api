@@ -58,42 +58,34 @@ app.post("/api/excel", upload.single("file"), (req, res) => {
     }
 });
 
+
 // Root-Route
 app.get("/", (req, res) => {
     res.json({ message: "Willkommen bei der Excel-API!" });
 });
 
-app.post("/convert-to-csv", upload.single("file"), (req, res) => {
+app.post("/api/convert-to-csv", upload.single("file"), (req, res) => {
     try {
         const filePath = req.file.path;
 
-
         // Excel-Datei einlesen
         const workbook = xlsx.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
+        const sheetName = workbook.SheetNames[0]; // Erster Tabellenblattname
         const worksheet = workbook.Sheets[sheetName];
 
-        const data = xlsx.utils.sheet_to_json(worksheet, {header: 1});
-
-
-        const updatedFilePath = `uploads/updated_${req.file.originalname}`;
-        xlsx.writeFile(workbook, updatedFilePath);
+        // Excel-Inhalte in CSV konvertieren
+        const csvData = xlsx.utils.sheet_to_csv(worksheet);
 
         // Temporäre Datei löschen
         fs.unlinkSync(filePath);
 
-        // Datei als Download zurückgeben
-        res.setHeader("Content-Disposition", "attachment; filename=updated_file.xlsx");
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        res.sendFile(updatedFilePath, (err) => {
-            if (err) {
-                console.error("Fehler beim Senden der Datei:",err);
-                res.status(500).send("Fehler beim Senden der Datei.");
-            }
-        })
+        // CSV-Datei als Download zurückgeben
+        res.setHeader("Content-Disposition", "attachment; filename=converted_file.csv");
+        res.setHeader("Content-Type", "text/csv");
+        res.send(csvData);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Fehler beim Verarbeiten der Datei." });
+        res.status(500).json({ error: "Fehler beim Konvertieren der Datei." });
     }
 });
 
