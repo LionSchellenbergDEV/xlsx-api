@@ -74,9 +74,8 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
 
         // XLSX-Datei laden
         const filePath = req.file.path;
-        let workbook;
         try {
-            workbook = xlsx.readFile(filePath);
+            const workbook = xlsx.readFile(filePath);
         } catch (err) {
             console.error("Fehler beim Lesen der XLSX-Datei:", err);
             return res.status(400).send("Fehler: Ungültige XLSX-Datei.");
