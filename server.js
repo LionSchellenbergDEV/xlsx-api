@@ -63,31 +63,47 @@ app.get("/", (req, res) => {
     res.json({ message: "Willkommen bei der Excel-API!" });
 });
 
-// Route zum Konvertieren von XLSX in CSV
 app.post("/convert-to-csv", upload.single("file"), (req, res) => {
     try {
-        // Datei prüfen
+        // Prüfe, ob eine Datei hochgeladen wurde
         if (!req.file) {
+            console.error("Fehler: Keine Datei hochgeladen.");
             return res.status(400).send("Fehler: Es wurde keine Datei hochgeladen.");
         }
+        console.log("Datei erfolgreich hochgeladen:", req.file);
 
         // XLSX-Datei laden
         const filePath = req.file.path;
-        const workbook = xlsx.readFile(filePath);
+        let workbook;
+        try {
+            workbook = XLSX.readFile(filePath);
+        } catch (err) {
+            console.error("Fehler beim Lesen der XLSX-Datei:", err);
+            return res.status(400).send("Fehler: Ungültige XLSX-Datei.");
+        }
+
+        // Konvertiere das erste Blatt in CSV
         const sheetName = workbook.SheetNames[0];
+        if (!sheetName) {
+            console.error("Fehler: Die XLSX-Datei enthält keine Blätter.");
+            return res.status(400).send("Fehler: Die XLSX-Datei ist leer.");
+        }
         const sheet = workbook.Sheets[sheetName];
+        const csvData = XLSX.utils.sheet_to_csv(sheet);
 
-        // In CSV umwandeln
-        const csvData = xlsx.utils.sheet_to_csv(sheet);
-
-        // Temporäre CSV-Datei erstellen
+        // Schreibe CSV in eine Datei
         const csvFilePath = `uploads/${path.parse(req.file.originalname).name}.csv`;
-        fs.writeFileSync(csvFilePath, csvData);
+        try {
+            fs.writeFileSync(csvFilePath, csvData);
+        } catch (err) {
+            console.error("Fehler beim Schreiben der CSV-Datei:", err);
+            return res.status(500).send("Fehler: Die CSV-Datei konnte nicht erstellt werden.");
+        }
 
-        // Datei zum Download zurückgeben
+        // CSV-Datei zum Download senden
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename="${path.parse(req.file.originalname).name}.csv"`
+            `attachment; filename=\"${path.parse(req.file.originalname).name}.csv\"`
         );
         res.setHeader("Content-Type", "text/csv");
         res.sendFile(csvFilePath, (err) => {
@@ -95,14 +111,14 @@ app.post("/convert-to-csv", upload.single("file"), (req, res) => {
                 console.error("Fehler beim Senden der Datei:", err);
                 res.status(500).send("Fehler beim Senden der Datei.");
             } else {
-                // Temporäre Datei nach dem Senden löschen
-                fs.unlinkSync(csvFilePath);
-                fs.unlinkSync(filePath);
+                console.log("Datei erfolgreich gesendet:", csvFilePath);
+                fs.unlinkSync(csvFilePath); // Temporäre Datei löschen
+                fs.unlinkSync(filePath); // Hochgeladene Datei löschen
             }
         });
     } catch (err) {
-        console.error("Fehler:", err);
-        res.status(500).send("Ein Problem ist aufgetreten.");
+        console.error("Unerwarteter Fehler:", err);
+        res.status(500).send("Ein unerwarteter Fehler ist aufgetreten.");
     }
 });
 
